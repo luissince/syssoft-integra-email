@@ -3,7 +3,7 @@ services:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/syssoftintegra/service-email:latest
     ports:
       - 6507:80
-    container_name: service-syssoft-integra-email
+    container_name: sysintegra-email
     restart: always
     networks:
       - luis
