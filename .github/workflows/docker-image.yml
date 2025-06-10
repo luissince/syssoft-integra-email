@@ -1,0 +1,121 @@
+name: Docker Build CI - SysSoftIntegra Email
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-service-email:
+    name: Build Email (Build Nest)
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Crear archivo .env
+        run: |
+          cat > .env <<EOL
+          NODE_ENV="${{secrets.NODE_ENV}}"
+          PORT="${{secrets.PORT}}"
+          APP_URL="${{secrets.APP_URL}}"
+          CORS_ORIGIN="${{secrets.CORS_ORIGIN}}"
+
+          AWS_REGION="${{secrets.AWS_REGION}}"
+          AWS_ACCESS_KEY_ID="${{secrets.AWS_ACCESS_KEY_ID}}"
+          AWS_SECRET_ACCESS_KEY="${{secrets.AWS_SECRET_ACCESS_KEY}}"
+
+          SMTP_USER="${{secrets.SMTP_USER}}"
+          SMTP_PASS="${{secrets.SMTP_PASS}}"
+
+          S3_BUCKET_NAME="${{secrets.S3_BUCKET_NAME}}"
+          EOL
+
+      - name: Verificar archivo .env
+        run: cat .env
+
+      - name: Construyendo contenedor de Nest
+        run: docker compose -f docker-compose.build.yml build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1 
+
+      - name: Tag nest image
+        run: docker tag service-email ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/syssoftintegra/service-email:latest
+
+      - name: Push nest image to ECR
+        run: docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/syssoftintegra/service-email:latest
+
+  deploy-service-email:
+    name: Build-Email (Deploy Nest)
+    if: github.ref == 'refs/heads/master'
+    runs-on: self-hosted
+    needs: build-service-email
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Descargar imagen desde ECR
+        run: docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/syssoftintegra/service-email:latest
+
+      - name: Crear y ejecutar contenedor en producción
+        run: docker compose -f docker-compose.prod.yml up -d
+      
+      - name: Eliminar imágenes locales
+        run: docker image prune -af || true
+
+  clean-ecr-images:
+    name: Borrar imágenes antiguas de ECR
+    runs-on: ubuntu-latest
+    needs: [build-service-email]
+    steps:
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Instalar jq
+        run: sudo apt-get install -y jq
+
+      - name: Borrar imágenes sin tag 'latest' - Service Nest
+        run: |
+          REPO="syssoftintegra/service-email"
+
+           # 1. Obtener todas las imágenes (excepto latest)
+            aws ecr list-images --repository-name $REPO \
+              --query 'imageIds[?type(imageTag)==`null` || imageTag!=`latest`]' \
+              --output json > images.json
+
+            # 2. Verificar si hay imágenes para borrar
+            if [ $(jq -e 'length > 0' images.json) = "true" ]; then
+              echo "Borrando $(jq length images.json) imágenes antiguas..."
+              aws ecr batch-delete-image --repository-name $REPO --image-ids file://images.json
+            else
+              echo "No hay imágenes antiguas para borrar en $REPO"
+            fi      
