@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   app:
-    container_name: service-email-test
+    container_name: service-syssoft-integra-email
     build:
       context: .
       dockerfile: Dockerfile
