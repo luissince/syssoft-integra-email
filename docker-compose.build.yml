@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: service-email
+    image: service-email
 
 
