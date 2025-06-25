@@ -1,20 +1,12 @@
 services:
   app:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/syssoftintegra/service-email:latest
-    ports:
-      - 6507:80
+    # ports:
+      # - 6507:80
     container_name: sysintegra-email
     restart: always
     networks:
       - luis
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "512m"
-        reservations:
-          cpus: "0.25"
-          memory: "256m"
 
 networks:
   luis:
