@@ -32,8 +32,6 @@ El proceso de despliegue se realiza utilizando herramientas como Docker Compose 
 
 - [Docker Compose](https://docs.docker.com/compose/) Es una herramienta de línea de comandos para crear y administrar aplicaciones y servicios de Docker.
 
-- [Kubernetes](https://kubernetes.io/) Es un orquestador de contenedores que automatiza la creación, ejecución y administración de contenedores.
-
 - [Git](https://git-scm.com/) Es un sistema de control de versiones distribuido que permite rastrear cambios en archivos y directorios.
 
 - [Git Hub](https://github.com/) Es un sitio web que permite alojar repositorios de código en línea y colaborar en proyectos.
@@ -120,9 +118,18 @@ Si deseas contribuir al proyecto, puedes seguir los siguientes pasos:
 
     ```bash
     NODE_ENV=development
-    PORT=3000
+    PORT=8100
     APP_URL=http://localhost:3001
     CORS_ORIGIN=*
+
+    AWS_REGION=us-east-1
+    AWS_ACCESS_KEY_ID=123456789012
+    AWS_SECRET_ACCESS_KEY=123456789012
+
+    SMTP_USER=user@domain.com
+    SMTP_PASS=password
+
+    S3_BUCKET_NAME=bucket-name
     ```
 
 4. Ejecutar el servico en modo desarrollo 
