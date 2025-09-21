@@ -1,4 +1,4 @@
-name: Docker Build CI - SysSoftIntegra Email
+name: Docker CI - SysSoftIntegra Email
 
 on:
   push:
@@ -56,7 +56,7 @@ jobs:
         run: docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/syssoftintegra/service-email:latest
 
   deploy-service-email:
-    name: Build-Email (Deploy Nest)
+    name: Deploy-Email (Deploy Nest)
     if: github.ref == 'refs/heads/master'
     runs-on: self-hosted
     needs: build-service-email
