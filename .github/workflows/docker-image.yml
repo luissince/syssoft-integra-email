@@ -57,9 +57,9 @@ jobs:
           APP_URL="${{secrets.APP_URL}}"
           CORS_ORIGIN="${{secrets.CORS_ORIGIN}}"
 
-          AWS_REGION="${{secrets.AWS_REGION}}"
-          AWS_ACCESS_KEY_ID="${{secrets.AWS_ACCESS_KEY_ID}}"
-          AWS_SECRET_ACCESS_KEY="${{secrets.AWS_SECRET_ACCESS_KEY}}"
+          AWS_REGION_SES="${{secrets.AWS_REGION_SES}}"
+          AWS_ACCESS_KEY_ID_SES="${{secrets.AWS_ACCESS_KEY_ID_SES}}"
+          AWS_SECRET_ACCESS_KEY_SES="${{secrets.AWS_SECRET_ACCESS_KEY_SES}}"
 
           SMTP_USER="${{secrets.SMTP_USER}}"
           SMTP_PASS="${{secrets.SMTP_PASS}}"
