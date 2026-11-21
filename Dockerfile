@@ -37,6 +37,9 @@ COPY --from=builder --chown=node:node /app/dist ./dist
 # Copiar package.json
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 
+# Copiar .env
+COPY --from=build --chown=node:node /app/.env ./.env
+
 # Ejecutar sin privilegios
 USER node
 
