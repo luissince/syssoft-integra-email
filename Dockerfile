@@ -1,65 +1,45 @@
-# Usa Debian Slim como imagen base para la construcción
-FROM debian:bullseye-slim AS build
 
-# Evita las preguntas interactivas durante la instalación de paquetes
-ENV DEBIAN_FRONTEND=noninteractive
+# 1 - Etapa de construcción
+FROM node:20-alpine AS builder
 
-# Actualiza el sistema e instala las dependencias necesarias
-RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    --no-install-recommends \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs --no-install-recommends \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copia el archivo package.json y package-lock.json para instalar dependencias
+# Copiar dependencias
 COPY package*.json ./
 
-# Instala las dependencias de producción
+# Instalar dependencias
 RUN npm ci
 
-# Copia el resto del código fuente de la aplicación
+# Copiar código
 COPY . .
 
-# Compila la aplicación para producción
+# Compilar
 RUN npm run build
 
-# Limpia las dependencias de desarrollo y caché de npm
-RUN npm cache clean --force
+# Preparar dependencias de producción
+RUN npm prune --omit=dev
 
-# Usa una imagen más ligera para la ejecución final
-FROM debian:bullseye-slim AS production
 
-# Evita las preguntas interactivas durante la instalación de paquetes
-ENV DEBIAN_FRONTEND=noninteractive
+# 2 - Etapa de producción
+FROM node:20-alpine AS runner
 
-# Actualiza el sistema e instala las dependencias necesarias
-RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    netcat-openbsd \
-    --no-install-recommends \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs --no-install-recommends \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copia solo los archivos necesarios desde la etapa de construcción
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/.env ./.env
+ENV NODE_ENV=production
+ENV PORT=80
 
-# Expone el puerto en el que la aplicación NestJS escuchará
+# Copiar dependencias de producción
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+
+# Copiar archivos compilados
+COPY --from=builder --chown=node:node /app/dist ./dist
+
+# Copiar package.json
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+
+# Ejecutar sin privilegios
+USER node
+
 EXPOSE 80
 
-# Comando para ejecutar la aplicación en modo producción
-CMD ["node", "dist/main"]
+CMD ["node", "dist/main.js"]
