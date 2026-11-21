@@ -4,6 +4,7 @@ import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } fr
 import * as nodemailer from 'nodemailer';
 import { AttachmentDto, BodyDto, Seresible } from './dto/body.dto';
 import { Readable } from 'stream';
+import { MessageRejected } from '@aws-sdk/client-ses';
 
 @Injectable()
 export class AppService {
@@ -32,7 +33,7 @@ export class AppService {
   async sendMail(body: BodyDto): Promise<string> {
     try {
       const hasAttachments = Array.isArray(body.attachments) && body.attachments.length > 0;
-  
+
       if (hasAttachments) {
         // Usar nodemailer (SMTP) si hay adjuntos
         const transporter = nodemailer.createTransport({
@@ -44,21 +45,15 @@ export class AppService {
             pass: process.env.SMTP_PASS,
           },
         });
-  
+
         const mailOptions = {
           from: `"${body.from.name || ''}" <${body.from.address}>`,
           to: `"${body.to.name || ''}" <${body.to.address}>`,
           subject: body.subject,
           html: body.html,
-          attachments: body.attachments.map((item: AttachmentDto<Seresible>) => ({
-            ...item,
-            content:
-              item.content?.type === 'Buffer'
-                ? Buffer.from(item.content.data)
-                : item.content,
-          })),
+          attachments: body.attachments,
         };
-  
+
         await transporter.sendMail(mailOptions);
       } else {
         // Usar SDK SES directo si NO hay adjuntos (más rápido y limpio)
@@ -80,20 +75,20 @@ export class AppService {
             },
           },
         });
-  
+
         await this.sesClient.send(command);
       }
-  
+
       // Guardar correo en S3 (opcional, útil para auditoría)
       const emailRecord = {
         from: body.from,
         to: body.to,
         subject: body.subject,
         html: body.html,
-        attachments: body.attachments.length > 0 ? body.attachments.map(((attachment)=>({filename: attachment.filename}))) : [],
+        attachments: body.attachments.length > 0 ? body.attachments.map(((attachment) => ({ filename: attachment.filename }))) : [],
         sentAt: new Date().toISOString(),
       };
-  
+
       await this.s3Client.send(
         new PutObjectCommand({
           Bucket: this.s3BucketName,
@@ -102,17 +97,24 @@ export class AppService {
           ContentType: 'application/json',
         }),
       );
-  
+
       return 'Correo enviado y guardado en S3 con éxito';
     } catch (error) {
       console.error('Error al enviar correo:', error);
+      if (error instanceof MessageRejected) {
+        throw new HttpException(
+          error.message,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
       throw new HttpException(
-        error.message || 'Error al enviar el correo electrónico',
+        'Error al enviar el correo electrónico',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
-  
+
 
   async listEmails(): Promise<any[]> {
     try {
