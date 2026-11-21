@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
 import * as nodemailer from 'nodemailer';
-import { AttachmentDto, BodyDto, Seresible } from './dto/body.dto';
+import { BodyDto } from './dto/body.dto';
 import { Readable } from 'stream';
 import { MessageRejected } from '@aws-sdk/client-ses';
 
@@ -14,18 +14,18 @@ export class AppService {
 
   constructor() {
     this.sesClient = new SESClient({
-      region: process.env.AWS_REGION,
+      region: process.env.AWS_REGION_SES,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID_SES,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY_SES,
       },
     });
 
     this.s3Client = new S3Client({
-      region: process.env.AWS_REGION,
+      region: process.env.AWS_REGION_SES,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID_SES,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY_SES,
       },
     });
   }
