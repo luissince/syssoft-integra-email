@@ -19,7 +19,6 @@ RUN npm run build
 # Preparar dependencias de producción
 RUN npm prune --omit=dev
 
-
 # 2 - Etapa de producción
 FROM node:20-alpine AS runner
 
@@ -36,9 +35,6 @@ COPY --from=builder --chown=node:node /app/dist ./dist
 
 # Copiar package.json
 COPY --from=builder --chown=node:node /app/package.json ./package.json
-
-# Copiar .env
-COPY --from=build --chown=node:node /app/.env ./.env
 
 # Ejecutar sin privilegios
 USER node
